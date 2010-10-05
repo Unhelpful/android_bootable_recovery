@@ -207,6 +207,7 @@ is_root_path_mounted(const char *root_path)
     return internal_root_mounted(info) >= 0;
 }
 
+#define sstr(str) ({ const char* __s = (const char*)(str); __s ? __s : "[NULL]"; })
 static int mount_internal(const char* device, const char* mount_point, const char* filesystem, const char* filesystem_options)
 {
     if (strcmp(filesystem, "auto") != 0 && filesystem_options == NULL) {
@@ -216,7 +217,10 @@ static int mount_internal(const char* device, const char* mount_point, const cha
         char mount_cmd[PATH_MAX];
         const char* options = filesystem_options == NULL ? "noatime,nodiratime,nodev" : filesystem_options;
         sprintf(mount_cmd, "mount -t %s -o%s %s %s", filesystem, options, device, mount_point);
-        return __system(mount_cmd);
+        if (__system(mount_cmd)) {
+		sprintf(mount_cmd, "mount -t auto -o noatime,nodiratime %s %s", device, mount_point);
+		return __system(mount_cmd);
+	} else return 0;
     }
 }
 
@@ -270,6 +274,8 @@ ensure_root_path_mounted(const char *root_path)
                     info->device, info->device2, strerror(errno));
             return -1;
         }
+    } else {
+        __system("mount");
     }
     return 0;
 }
